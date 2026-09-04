@@ -32,8 +32,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.clip
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.CircleShape
@@ -58,13 +59,19 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        keyListener?.invoke(event)
-        return if (isGamepadEvent(event)) true else super.onKeyDown(keyCode, event)
+        if (isGamepadEvent(event)) {
+            keyListener?.invoke(event)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        keyListener?.invoke(event)
-        return if (isGamepadEvent(event)) true else super.onKeyUp(keyCode, event)
+        if (isGamepadEvent(event)) {
+            keyListener?.invoke(event)
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     override fun dispatchGenericMotionEvent(event: MotionEvent): Boolean {
@@ -115,6 +122,8 @@ fun GamepadTesterApp(
     var axisCount by remember { mutableIntStateOf(0) }
     var vibrationSupported by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf("Scan for a controller") }
+
+    val context = LocalContext.current
 
     fun findController(): InputDevice? {
         for (id in InputDevice.getDeviceIds()) {
@@ -371,7 +380,7 @@ fun GamepadTesterApp(
                 SectionTitle("📳 VIBRATION")
                 Button(
                     enabled = vibrationSupported,
-                    onClick = { vibrate(this@GamepadTesterApp) },
+                    onClick = { vibrate(context) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(if (vibrationSupported) "TEST VIBRATION" else "VIBRATION NOT DETECTED")
