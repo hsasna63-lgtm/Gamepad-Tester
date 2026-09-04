@@ -2,13 +2,16 @@ package com.gamepadtester
 
 import android.os.Bundle
 import android.view.InputDevice
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -22,20 +25,74 @@ import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
 
+    private var onGamepadKey: ((KeyEvent) -> Unit)? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            GamepadTesterApp()
+            GamepadTesterApp(
+                registerKeyListener = { listener ->
+                    onGamepadKey = listener
+                }
+            )
         }
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+
+        onGamepadKey?.invoke(event)
+
+        if (event.source and InputDevice.SOURCE_GAMEPAD ==
+            InputDevice.SOURCE_GAMEPAD
+        ) {
+            return true
+        }
+
+        if (event.source and InputDevice.SOURCE_JOYSTICK ==
+            InputDevice.SOURCE_JOYSTICK
+        ) {
+            return true
+        }
+
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+
+        onGamepadKey?.invoke(event)
+
+        if (event.source and InputDevice.SOURCE_GAMEPAD ==
+            InputDevice.SOURCE_GAMEPAD
+        ) {
+            return true
+        }
+
+        if (event.source and InputDevice.SOURCE_JOYSTICK ==
+            InputDevice.SOURCE_JOYSTICK
+        ) {
+            return true
+        }
+
+        return super.onKeyUp(keyCode, event)
     }
 }
 
 @Composable
-fun GamepadTesterApp() {
+fun GamepadTesterApp(
+    registerKeyListener: (((KeyEvent) -> Unit) -> Unit)
+) {
 
     var controllerName by remember {
         mutableStateOf("No controller detected")
+    }
+
+    var pressedButton by remember {
+        mutableStateOf("None")
+    }
+
+    var buttonAction by remember {
+        mutableStateOf("Waiting...")
     }
 
     fun scanController() {
@@ -73,6 +130,38 @@ fun GamepadTesterApp() {
     }
 
     LaunchedEffect(Unit) {
+
+        registerKeyListener { event ->
+
+            val device = event.device
+
+            if (device != null) {
+
+                val isGamepad =
+                    (event.source and InputDevice.SOURCE_GAMEPAD) ==
+                            InputDevice.SOURCE_GAMEPAD
+
+                val isJoystick =
+                    (event.source and InputDevice.SOURCE_JOYSTICK) ==
+                            InputDevice.SOURCE_JOYSTICK
+
+                if (isGamepad || isJoystick) {
+
+                    controllerName = device.name
+
+                    pressedButton =
+                        KeyEvent.keyCodeToString(event.keyCode)
+
+                    buttonAction =
+                        if (event.action == KeyEvent.ACTION_DOWN) {
+                            "PRESSED"
+                        } else {
+                            "RELEASED"
+                        }
+                }
+            }
+        }
+
         scanController()
     }
 
@@ -81,47 +170,71 @@ fun GamepadTesterApp() {
             .fillMaxSize()
             .background(Color(0xFF101114))
             .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-
-        Text(
-            text = "🎮",
-            fontSize = 70.sp
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Gamepad Tester",
-            color = Color.White,
-            fontSize = 30.sp
-        )
 
         Spacer(modifier = Modifier.height(30.dp))
 
         Text(
+            text = "🎮 Gamepad Tester",
+            color = Color.White,
+            fontSize = 28.sp
+        )
+
+        Spacer(modifier = Modifier.height(25.dp))
+
+        Text(
             text = "Controller",
             color = Color.LightGray,
+            fontSize = 16.sp
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Text(
+            text = controllerName,
+            color = Color.White,
+            fontSize = 20.sp
+        )
+
+        Spacer(modifier = Modifier.height(35.dp))
+
+        Text(
+            text = "BUTTON TEST",
+            color = Color.LightGray,
             fontSize = 18.sp
+        )
+
+        Spacer(modifier = Modifier.height(15.dp))
+
+        Text(
+            text = pressedButton,
+            color = Color.White,
+            fontSize = 24.sp
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = controllerName,
-            color = Color.White,
-            fontSize = 22.sp
+            text = buttonAction,
+            color = Color.Green,
+            fontSize = 20.sp
         )
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(35.dp))
 
-        Button(
-            onClick = {
-                scanController()
-            }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
         ) {
-            Text("SCAN CONTROLLER")
+
+            Button(
+                onClick = {
+                    scanController()
+                }
+            ) {
+                Text("SCAN")
+            }
         }
     }
 }
